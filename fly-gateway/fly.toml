@@ -4,7 +4,8 @@ app = "trunk-talk-dialer"
 primary_region = "iad"
 
 [build]
-dockerfile = "fly-gateway/Dockerfile"
+context = ".."
+dockerfile = "Dockerfile"
 
 [env]
 PORT = "8080"
