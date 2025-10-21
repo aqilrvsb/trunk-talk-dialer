@@ -60,7 +60,7 @@ const SIPConfigDialog = ({ open, onOpenChange, onConnected }: SIPConfigDialogPro
         <DialogHeader>
           <DialogTitle>SIP Configuration</DialogTitle>
           <DialogDescription>
-            Configure your SIP trunk settings. Note: Your SIP provider must support WebSocket connections for browser-based calling.
+            Configure your AlienVoIP SIP trunk settings. The gateway will handle WebSocket-to-SIP translation automatically.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

@@ -34,11 +34,14 @@ export class SIPService {
       }, 15000); // 15 second timeout
 
       try {
-        // Try multiple transports - WebSocket with different ports
+        // Use our WebSocket gateway Edge Function
+        const projectId = 'dpkgepnnfsmgygcyoxqy';
+        const gatewayUrl = `wss://${projectId}.supabase.co/functions/v1/sip-gateway`;
+        
+        console.log('Connecting via WebSocket gateway:', gatewayUrl);
+        
         const sockets = [
-          new JsSIP.WebSocketInterface(`wss://${config.server}:7443`),
-          new JsSIP.WebSocketInterface(`wss://${config.server}:443`),
-          new JsSIP.WebSocketInterface(`ws://${config.server}:5060`)
+          new JsSIP.WebSocketInterface(gatewayUrl)
         ];
         
         const configuration = {

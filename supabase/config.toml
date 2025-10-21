@@ -1,0 +1,4 @@
+project_id = "dpkgepnnfsmgygcyoxqy"
+
+[functions.sip-gateway]
+verify_jwt = false
