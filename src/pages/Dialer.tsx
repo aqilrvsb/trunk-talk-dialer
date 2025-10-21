@@ -3,6 +3,7 @@ import Dialpad from "@/components/dialer/Dialpad";
 import CallInterface from "@/components/dialer/CallInterface";
 import SIPStatus from "@/components/dialer/SIPStatus";
 import SIPConfigDialog from "@/components/dialer/SIPConfigDialog";
+import ConnectionInfo from "@/components/dialer/ConnectionInfo";
 import { Button } from "@/components/ui/button";
 import { Phone, Users, Clock, Settings } from "lucide-react";
 import { sipService } from "@/lib/sipService";
@@ -114,12 +115,14 @@ const Dialer = () => {
   return (
     <div className="min-h-screen bg-gradient-dark">
       <div className="container mx-auto px-4 py-6 max-w-md">
-        <header className="mb-8">
+        <header className="mb-6">
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             SIP Dialer
           </h1>
           <p className="text-muted-foreground mt-1">Professional VoIP Calling</p>
         </header>
+
+        {!isConnected && <ConnectionInfo />}
 
         <SIPStatus isConnected={isConnected} onConfigClick={handleConfigClick} />
 

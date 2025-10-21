@@ -34,14 +34,19 @@ const SIPConfigDialog = ({ open, onOpenChange, onConnected }: SIPConfigDialogPro
       await sipService.connect(config);
       toast({
         title: "Connected",
-        description: "Successfully connected to AlienVoIP",
+        description: "Successfully connected to SIP server",
       });
       onConnected();
       onOpenChange(false);
     } catch (error) {
+      console.error('Connection error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to connect";
+      
       toast({
         title: "Connection Failed",
-        description: error instanceof Error ? error.message : "Failed to connect to SIP server",
+        description: errorMessage.includes('timeout') 
+          ? "Unable to reach SIP server. Your provider may not support WebSocket connections required for browser-based calling." 
+          : errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -55,7 +60,7 @@ const SIPConfigDialog = ({ open, onOpenChange, onConnected }: SIPConfigDialogPro
         <DialogHeader>
           <DialogTitle>SIP Configuration</DialogTitle>
           <DialogDescription>
-            Configure your AlienVoIP SIP trunk settings
+            Configure your SIP trunk settings. Note: Your SIP provider must support WebSocket connections for browser-based calling.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

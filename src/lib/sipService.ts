@@ -24,16 +24,33 @@ export class SIPService {
 
   async connect(config: SIPConfig): Promise<boolean> {
     return new Promise((resolve, reject) => {
+      // Set a timeout for the connection attempt
+      const timeout = setTimeout(() => {
+        if (this.ua) {
+          this.ua.stop();
+          this.ua = null;
+        }
+        reject(new Error('Connection timeout - unable to reach SIP server'));
+      }, 15000); // 15 second timeout
+
       try {
-        const socket = new JsSIP.WebSocketInterface(`wss://${config.server}:7443`);
+        // Try multiple transports - WebSocket with different ports
+        const sockets = [
+          new JsSIP.WebSocketInterface(`wss://${config.server}:7443`),
+          new JsSIP.WebSocketInterface(`wss://${config.server}:443`),
+          new JsSIP.WebSocketInterface(`ws://${config.server}:5060`)
+        ];
         
         const configuration = {
-          sockets: [socket],
+          sockets: sockets,
           uri: `sip:${config.username}@${config.server}`,
           password: config.password,
           display_name: config.displayName || config.username,
           register: true,
           session_timers: false,
+          register_expires: 600,
+          connection_recovery_min_interval: 2,
+          connection_recovery_max_interval: 30,
         };
 
         console.log('Creating UA with config:', configuration);
@@ -41,21 +58,28 @@ export class SIPService {
         this.ua = new JsSIP.UA(configuration);
 
         this.ua.on('connected', () => {
-          console.log('SIP connected');
+          console.log('SIP WebSocket connected');
         });
 
-        this.ua.on('disconnected', () => {
-          console.log('SIP disconnected');
+        this.ua.on('disconnected', (e: any) => {
+          console.log('SIP disconnected:', e);
+          if (!this.ua?.isRegistered()) {
+            clearTimeout(timeout);
+            reject(new Error('Failed to connect to SIP server'));
+          }
         });
 
         this.ua.on('registered', () => {
           console.log('SIP registered successfully');
+          clearTimeout(timeout);
           resolve(true);
         });
 
         this.ua.on('registrationFailed', (e: any) => {
           console.error('SIP registration failed:', e);
-          reject(new Error('Registration failed: ' + e.cause));
+          clearTimeout(timeout);
+          const errorMsg = e.cause || e.response?.reason_phrase || 'Unknown error';
+          reject(new Error(`Registration failed: ${errorMsg}`));
         });
 
         this.ua.on('newRTCSession', (data: any) => {
@@ -69,6 +93,7 @@ export class SIPService {
 
         this.ua.start();
       } catch (error) {
+        clearTimeout(timeout);
         console.error('Error connecting to SIP:', error);
         reject(error);
       }
