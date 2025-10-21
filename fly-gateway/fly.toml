@@ -5,7 +5,7 @@ primary_region = "iad"
 
 [build]
 context = ".."
-dockerfile = "Dockerfile"
+dockerfile = "fly-gateway/Dockerfile"
 
 [env]
 PORT = "8080"
