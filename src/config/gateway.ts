@@ -5,8 +5,7 @@
 
 export const GATEWAY_CONFIG = {
   // Use Fly.io gateway (recommended for production)
-  // Update this after deploying to Fly.io
-  GATEWAY_URL: 'wss://sip-gateway-YOUR-NAME.fly.dev',
+  GATEWAY_URL: 'wss://trunk-talk-dialer.fly.dev',
   
   // Fallback to Supabase edge function (won't work due to network restrictions)
   // Only for local development testing
