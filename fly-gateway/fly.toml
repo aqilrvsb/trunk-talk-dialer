@@ -1,6 +1,6 @@
 # fly.toml - Fly.io configuration for SIP Gateway
 
-app = "sip-gateway"
+app = "trunk-talk-dialer"
 primary_region = "iad"
 
 [build]
