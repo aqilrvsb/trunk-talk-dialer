@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { externalSupabase, SIPAccount } from "@/lib/externalSupabase";
+import { SIPAccount } from "@/lib/externalSupabase";
 import AccountCard from "@/components/sip/AccountCard";
 import AccountDialog from "@/components/sip/AccountDialog";
-import AuthGate from "@/components/auth/AuthGate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,27 +28,12 @@ const Accounts = () => {
     loadAccounts();
   }, []);
 
-  const loadAccounts = async () => {
+  const loadAccounts = () => {
     try {
-      const { data: { user } } = await externalSupabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to manage SIP accounts",
-          variant: "destructive",
-        });
-        return;
+      const stored = localStorage.getItem('sip_accounts');
+      if (stored) {
+        setAccounts(JSON.parse(stored));
       }
-
-      const { data, error } = await externalSupabase
-        .from('sip_accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setAccounts(data || []);
     } catch (error) {
       console.error('Error loading accounts:', error);
       toast({
@@ -64,35 +48,47 @@ const Accounts = () => {
 
   const handleSave = async (accountData: Partial<SIPAccount>) => {
     try {
-      const { data: { user } } = await externalSupabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
+      let updatedAccounts: SIPAccount[];
+      
       if (editingAccount) {
-        const { error } = await externalSupabase
-          .from('sip_accounts')
-          .update(accountData)
-          .eq('id', editingAccount.id);
+        // Update existing account
+        updatedAccounts = accounts.map(acc => 
+          acc.id === editingAccount.id 
+            ? { ...acc, ...accountData, updated_at: new Date().toISOString() }
+            : acc
+        );
 
-        if (error) throw error;
-        
         toast({
           title: "Success",
           description: "Account updated successfully",
         });
       } else {
-        const { error } = await externalSupabase
-          .from('sip_accounts')
-          .insert([{ ...accountData, user_id: user.id }]);
-
-        if (error) throw error;
+        // Create new account
+        const newAccount: SIPAccount = {
+          id: crypto.randomUUID(),
+          user_id: '',
+          account_name: accountData.account_name || '',
+          sip_server: accountData.sip_server || '',
+          sip_username: accountData.sip_username || '',
+          sip_password: accountData.sip_password || '',
+          display_name: accountData.display_name || null,
+          phone_number: accountData.phone_number || null,
+          is_connected: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
         
+        updatedAccounts = [...accounts, newAccount];
+
         toast({
           title: "Success",
           description: "Account added successfully",
         });
       }
 
-      loadAccounts();
+      localStorage.setItem('sip_accounts', JSON.stringify(updatedAccounts));
+      setAccounts(updatedAccounts);
+      setShowDialog(false);
       setEditingAccount(undefined);
     } catch (error) {
       console.error('Error saving account:', error);
@@ -120,19 +116,14 @@ const Accounts = () => {
     if (!deleteAccount) return;
 
     try {
-      const { error } = await externalSupabase
-        .from('sip_accounts')
-        .delete()
-        .eq('id', deleteAccount.id);
-
-      if (error) throw error;
+      const updatedAccounts = accounts.filter(acc => acc.id !== deleteAccount.id);
+      localStorage.setItem('sip_accounts', JSON.stringify(updatedAccounts));
+      setAccounts(updatedAccounts);
 
       toast({
         title: "Success",
         description: "Account deleted successfully",
       });
-
-      loadAccounts();
     } catch (error) {
       console.error('Error deleting account:', error);
       toast({
@@ -157,32 +148,33 @@ const Accounts = () => {
   }
 
   return (
-    <AuthGate>
-      <div className="min-h-screen bg-gradient-dark">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <header className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-dark p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               SIP Accounts
             </h1>
-            <p className="text-muted-foreground mt-1">Manage your SIP accounts</p>
+            <p className="text-muted-foreground mt-2">
+              Manage your SIP accounts
+            </p>
           </div>
-          <Button onClick={() => setShowDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={() => setShowDialog(true)} size="lg">
+            <Plus className="mr-2 h-5 w-5" />
             Add Account
           </Button>
-        </header>
+        </div>
 
         {accounts.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No SIP accounts configured</p>
+            <p className="text-muted-foreground mb-4">No SIP accounts yet</p>
             <Button onClick={() => setShowDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               Add Your First Account
             </Button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {accounts.map((account) => (
               <AccountCard
                 key={account.id}
@@ -205,23 +197,31 @@ const Accounts = () => {
           account={editingAccount}
         />
 
-        <AlertDialog open={!!deleteAccount} onOpenChange={() => setDeleteAccount(undefined)}>
+        <AlertDialog 
+          open={!!deleteAccount} 
+          onOpenChange={(open) => !open && setDeleteAccount(undefined)}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Account</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{deleteAccount?.account_name}"? This action cannot be undone.
+                Are you sure you want to delete "{deleteAccount?.account_name}"? 
+                This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      </div>
-    </AuthGate>
+    </div>
   );
 };
 
