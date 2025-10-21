@@ -5,7 +5,7 @@ const PORT = parseInt(Deno.env.get("PORT") || "8080");
 
 console.log(`Starting WebSocket-to-SIP gateway on port ${PORT}...`);
 
-Deno.serve({ port: PORT }, (req) => {
+Deno.serve({ port: PORT, hostname: "0.0.0.0" }, (req) => {
   // Handle WebSocket upgrade
   if (req.headers.get("upgrade") === "websocket") {
     const { socket, response } = Deno.upgradeWebSocket(req);
