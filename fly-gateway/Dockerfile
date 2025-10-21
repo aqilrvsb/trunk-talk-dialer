@@ -2,9 +2,9 @@ FROM denoland/deno:1.40.0
 
 WORKDIR /app
 
-# Copy the gateway code (build context is fly-gateway/ directory)
-COPY server.ts .
-COPY deno.json .
+# Copy the gateway code (paths relative to project root)
+COPY fly-gateway/server.ts .
+COPY fly-gateway/deno.json .
 
 # Cache dependencies
 RUN deno cache server.ts
