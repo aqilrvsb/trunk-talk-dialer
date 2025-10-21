@@ -58,6 +58,50 @@ wss://sip-gateway-YOUR-NAME.fly.dev
 
 In your React app, update the SIP service to use your Fly.io gateway URL instead of the Supabase edge function.
 
+### 8. Set Up Auto-Deployment (Optional)
+
+To automatically deploy when you push to GitHub:
+
+```bash
+# Enable auto-deployment from GitHub
+flyctl apps github attach -a trunk-talk-dialer
+
+# This will:
+# 1. Link your GitHub repository
+# 2. Set up automatic deployments on push to main branch
+# 3. Deploy whenever you push changes to fly-gateway/
+
+# To configure which branch triggers deployment:
+flyctl apps github config -a trunk-talk-dialer --branch main
+```
+
+Alternatively, you can set up GitHub Actions by creating `.github/workflows/fly-deploy.yml`:
+
+```yaml
+name: Fly Deploy
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'fly-gateway/**'
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --config fly-gateway/fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+```
+
+Then add your Fly.io API token to GitHub secrets:
+1. Get token: `flyctl auth token`
+2. Go to GitHub repo → Settings → Secrets → New repository secret
+3. Name: `FLY_API_TOKEN`, Value: [your token]
+
 ## Testing
 
 To test the gateway:
