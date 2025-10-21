@@ -19,49 +19,51 @@ Deno.serve({ port: PORT, hostname: "0.0.0.0" }, (req) => {
     
     socket.onmessage = async (event) => {
       try {
-        const message = JSON.parse(event.data);
+        const message = event.data;
         
-        // Handle connect command
-        if (message.type === "connect" && message.sipServer) {
-          console.log(`Connecting to SIP server: ${message.sipServer}`);
+        // Auto-connect to SIP server on first message
+        if (!sipSocket) {
+          // Default SIP server - extract from SIP message or use default
+          const host = "sip1.alienvoip.com";
+          const port = 5060;
           
-          // Parse SIP server address
-          const [host, portStr] = message.sipServer.split(":");
-          const port = parseInt(portStr || "5060");
+          console.log(`Auto-connecting to SIP server: ${host}:${port}`);
           
           try {
-            // Connect to SIP server
             sipSocket = await Deno.connect({ hostname: host, port });
             console.log(`Connected to SIP server ${host}:${port}`);
             
-            // Read from SIP server and send to WebSocket
+            // Start reading from SIP server and forwarding to WebSocket
             (async () => {
               const buffer = new Uint8Array(8192);
               while (sipSocket) {
                 try {
                   const n = await sipSocket.read(buffer);
-                  if (n === null) break;
+                  if (n === null) {
+                    console.log("SIP server closed connection");
+                    socket.close();
+                    break;
+                  }
                   
                   const text = new TextDecoder().decode(buffer.subarray(0, n));
-                  socket.send(text);
+                  if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(text);
+                  }
                 } catch (err) {
                   console.error("Error reading from SIP:", err);
                   break;
                 }
               }
             })();
-            
-            socket.send(JSON.stringify({ type: "connected" }));
           } catch (err) {
             console.error("Failed to connect to SIP server:", err);
-            socket.send(JSON.stringify({ 
-              type: "error", 
-              message: `Failed to connect: ${err.message}` 
-            }));
+            socket.close();
+            return;
           }
         }
-        // Forward SIP messages
-        else if (sipSocket && typeof message === "string") {
+        
+        // Forward message to SIP server
+        if (sipSocket && typeof message === "string") {
           const encoder = new TextEncoder();
           await sipSocket.write(encoder.encode(message));
         }
