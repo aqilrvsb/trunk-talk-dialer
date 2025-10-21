@@ -7,12 +7,14 @@ import ConnectionInfo from "@/components/dialer/ConnectionInfo";
 import { Button } from "@/components/ui/button";
 import { Phone, Users, Clock, Settings } from "lucide-react";
 import { sipService } from "@/lib/sipService";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 type CallState = "idle" | "connecting" | "ringing" | "connected" | "ended";
 
 const Dialer = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [callState, setCallState] = useState<CallState>("idle");
   const [isConnected, setIsConnected] = useState(false);
@@ -158,9 +160,9 @@ const Dialer = () => {
                 <Users className="h-5 w-5" />
                 <span className="text-xs">Contacts</span>
               </Button>
-              <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1" onClick={handleConfigClick}>
+              <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1" onClick={() => navigate('/accounts')}>
                 <Settings className="h-5 w-5" />
-                <span className="text-xs">Settings</span>
+                <span className="text-xs">Accounts</span>
               </Button>
             </div>
           </div>

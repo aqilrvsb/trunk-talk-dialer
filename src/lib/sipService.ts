@@ -1,4 +1,5 @@
 import JsSIP from 'jssip';
+import { getGatewayUrl } from '@/config/gateway';
 
 export interface SIPConfig {
   server: string;
@@ -34,9 +35,8 @@ export class SIPService {
       }, 15000); // 15 second timeout
 
       try {
-        // Use our WebSocket gateway Edge Function
-        const projectId = 'dpkgepnnfsmgygcyoxqy';
-        const gatewayUrl = `wss://${projectId}.supabase.co/functions/v1/sip-gateway`;
+        // Use configured WebSocket gateway (Fly.io or Edge Function)
+        const gatewayUrl = getGatewayUrl();
         
         console.log('Connecting via WebSocket gateway:', gatewayUrl);
         
