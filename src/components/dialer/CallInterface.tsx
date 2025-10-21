@@ -5,21 +5,30 @@ import { Phone, Mic, MicOff, Volume2, VolumeX, MoreVertical } from "lucide-react
 
 interface CallInterfaceProps {
   phoneNumber: string;
+  callState: "connecting" | "ringing" | "connected" | "ended";
+  isMuted: boolean;
   onHangup: () => void;
+  onToggleMute: () => void;
 }
 
-const CallInterface = ({ phoneNumber, onHangup }: CallInterfaceProps) => {
+const CallInterface = ({ phoneNumber, callState, isMuted, onHangup, onToggleMute }: CallInterfaceProps) => {
   const [duration, setDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
   const [isSpeaker, setIsSpeaker] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDuration((prev) => prev + 1);
-    }, 1000);
+    let interval: NodeJS.Timeout;
+    if (callState === "connected") {
+      interval = setInterval(() => {
+        setDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setDuration(0);
+    }
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [callState]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -27,11 +36,28 @@ const CallInterface = ({ phoneNumber, onHangup }: CallInterfaceProps) => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const getStatusText = () => {
+    switch (callState) {
+      case "connecting":
+        return "Connecting...";
+      case "ringing":
+        return "Ringing...";
+      case "connected":
+        return "Connected";
+      case "ended":
+        return "Call Ended";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="space-y-8 pb-24">
       <Card className="bg-card/50 backdrop-blur-sm border-border p-8">
         <div className="text-center space-y-4">
-          <div className="w-24 h-24 mx-auto rounded-full bg-primary/20 flex items-center justify-center animate-pulse-slow">
+          <div className={`w-24 h-24 mx-auto rounded-full bg-primary/20 flex items-center justify-center ${
+            callState === "ringing" || callState === "connecting" ? "animate-pulse-slow" : ""
+          }`}>
             <Phone className="h-12 w-12 text-primary" />
           </div>
           
@@ -39,50 +65,58 @@ const CallInterface = ({ phoneNumber, onHangup }: CallInterfaceProps) => {
             <h2 className="text-2xl font-semibold text-foreground">
               {phoneNumber}
             </h2>
-            <p className="text-muted-foreground mt-2">Connected</p>
+            <p className="text-muted-foreground mt-2">{getStatusText()}</p>
           </div>
 
-          <div className="text-lg font-mono text-primary">
-            {formatDuration(duration)}
-          </div>
+          {callState === "connected" && (
+            <div className="text-lg font-mono text-primary">
+              {formatDuration(duration)}
+            </div>
+          )}
         </div>
       </Card>
 
-      <div className="grid grid-cols-3 gap-6 px-4">
-        <Button
-          variant="secondary"
-          className="h-16 flex flex-col items-center justify-center gap-2 hover:bg-primary/20"
-          onClick={() => setIsMuted(!isMuted)}
-        >
-          {isMuted ? (
-            <MicOff className="h-6 w-6" />
-          ) : (
-            <Mic className="h-6 w-6" />
-          )}
-          <span className="text-xs">{isMuted ? "Unmute" : "Mute"}</span>
-        </Button>
+      {callState === "connected" && (
+        <div className="grid grid-cols-3 gap-6 px-4">
+          <Button
+            variant="secondary"
+            className={`h-16 flex flex-col items-center justify-center gap-2 ${
+              isMuted ? "bg-primary/20" : "hover:bg-primary/20"
+            }`}
+            onClick={onToggleMute}
+          >
+            {isMuted ? (
+              <MicOff className="h-6 w-6 text-destructive" />
+            ) : (
+              <Mic className="h-6 w-6" />
+            )}
+            <span className="text-xs">{isMuted ? "Unmute" : "Mute"}</span>
+          </Button>
 
-        <Button
-          variant="secondary"
-          className="h-16 flex flex-col items-center justify-center gap-2 hover:bg-primary/20"
-          onClick={() => setIsSpeaker(!isSpeaker)}
-        >
-          {isSpeaker ? (
-            <Volume2 className="h-6 w-6" />
-          ) : (
-            <VolumeX className="h-6 w-6" />
-          )}
-          <span className="text-xs">Speaker</span>
-        </Button>
+          <Button
+            variant="secondary"
+            className={`h-16 flex flex-col items-center justify-center gap-2 ${
+              isSpeaker ? "bg-primary/20" : "hover:bg-primary/20"
+            }`}
+            onClick={() => setIsSpeaker(!isSpeaker)}
+          >
+            {isSpeaker ? (
+              <Volume2 className="h-6 w-6 text-primary" />
+            ) : (
+              <VolumeX className="h-6 w-6" />
+            )}
+            <span className="text-xs">Speaker</span>
+          </Button>
 
-        <Button
-          variant="secondary"
-          className="h-16 flex flex-col items-center justify-center gap-2 hover:bg-primary/20"
-        >
-          <MoreVertical className="h-6 w-6" />
-          <span className="text-xs">More</span>
-        </Button>
-      </div>
+          <Button
+            variant="secondary"
+            className="h-16 flex flex-col items-center justify-center gap-2 hover:bg-primary/20"
+          >
+            <MoreVertical className="h-6 w-6" />
+            <span className="text-xs">More</span>
+          </Button>
+        </div>
+      )}
 
       <div className="flex justify-center px-4">
         <Button
